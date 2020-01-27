@@ -1,19 +1,21 @@
 package PlanPackage;
 import java.util.List;
-
+import java.util.*;
 @SuppressWarnings("unused")
 public class VM {
 
 	int groupId;//to find vm pair connected.
 	int VmOGSource;//Original location
-	int VmNew;
+	int VmPairSource;
+	@SuppressWarnings("rawtypes")
+	Dictionary Utility = new Hashtable();
 	int Frequency;
 	int MigrationCost;
 
-	public VM(int gid,int vms, int vmn, int f, int mc) {
+	public VM(int gid,int vms, int vmps, int f, int mc) {
 		this.groupId = gid;
 		this.VmOGSource = vms;
-		this.VmNew = vmn;
+		this.VmPairSource = vmps;
 		this.Frequency = f;
 		this.MigrationCost = mc;
 	}
@@ -28,15 +30,31 @@ public class VM {
 	public void setGroupId(int groupId) {
 		this.groupId = groupId;
 	}
-	
-	public int getVmNew() {
-		return VmNew;
+
+	public int getVmPairSource() {
+		return VmPairSource;
 	}
 	
-	public void setVmNew(int vmNew) {
-		VmNew = vmNew;
+	public void setVmPairSource(int vmNew) {
+		VmPairSource = vmNew;
 	}
 	
+	public int getVmOGSource() {
+		return VmOGSource;
+	}
+
+	public void setVmOGSource(int vmOGSource) {
+		VmOGSource = vmOGSource;
+	}
+
+	public Dictionary getUtility() {
+		return Utility;
+	}
+
+	public void setUtility(Dictionary utility) {
+		Utility = utility;
+	}
+
 	//get set vmsource
 	public int getVmSource() {
 		return VmOGSource;
