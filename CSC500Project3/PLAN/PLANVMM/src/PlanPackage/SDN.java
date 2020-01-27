@@ -10,7 +10,6 @@ public class SDN {
 	static HashMap<Integer, String> TopoMap = new HashMap<Integer, String>();
 
 	public static int ShorestDistance(int k,int j,int i) {		
-
 		return NumberOfHops(k,j,i);
 	}	
 
@@ -43,11 +42,6 @@ public class SDN {
 			}
 		}		
 		inputs[0] = input;
-
-		//PodMap = CreatePodMap(inputs[0]);
-		//TopoMap = CreateTopology(inputs[0]);
-		//PrintMap(PodMap, true);
-		//PrintMap(TopoMap, false);	
 
 		int numPms = (int)(Math.pow(inputs[0], 3)/4);
 
