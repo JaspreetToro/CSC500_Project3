@@ -23,6 +23,12 @@ public class PlanGenerator {
 	public static List<VM> Vms = new ArrayList<VM>();;
 
 	public static void main(String[] args) {
+		
+		//////////////////////////////////////////////
+		//Hey Jaspreet, We just need to finish the VmCCR method and the code to display our findings.
+		//The project should be done after that.
+		//////////////////////////////////////////////
+		
 		//k,rc,vmpairs,mbs,frequency,migration
 		//get inputs
 		//int[] inputs = SDN.GetInput(); // Uncomment to get out of testing mode
