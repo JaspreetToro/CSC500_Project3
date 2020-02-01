@@ -2,10 +2,13 @@ package PlanPackage;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Dictionary;
+import java.util.Enumeration;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Random;
 import java.io.*;
 
+@SuppressWarnings("rawtypes")
 public class PlanGenerator {
 
 	//globals
@@ -20,27 +23,22 @@ public class PlanGenerator {
 	public static int firstMB; 
 	public static int lastMB;
 	public static int migration;
-	public static List<VM> Vms = new ArrayList<VM>();;
+	public static List<VM> Vms = new ArrayList<VM>();
+	public static List<String> cap = new ArrayList<String>();
 
 	public static void main(String[] args) {
-		
-		//////////////////////////////////////////////
-		//Hey Jaspreet, We just need to finish the VmCCR method and the code to display our findings.
-		//The project should be done after that.
-		//////////////////////////////////////////////
-		
 		//k,rc,vmpairs,mbs,frequency,migration
 		//get inputs
-		//int[] inputs = SDN.GetInput(); // Uncomment to get out of testing mode
+		int[] inputs = SDN.GetInput();
 
-		//testing data
-		SetUpPLAN(4,4,2,2,2,1);
+		//SetUpPLAN(6,50,10,4,100,10);
 		//k,resCap,VmPairsCount,boxes,frequecy.migration
-		//SetUpPLAN(inputs[0],inputs[1],inputs[2],inputs[3],inputs[4],inputs[5]); // Uncomment to get out of testing mode
+		SetUpPLAN(inputs[0],inputs[1],inputs[2],inputs[3],inputs[4],inputs[5]);
 
 	}
 
 	///
+	@SuppressWarnings({ "unchecked" })
 	public static void SetUpPLAN(int numPods,int resCap, int vmPairs,int boxes, int frequency,int migCoe) {	
 		k = numPods;
 		migration = migCoe;
@@ -57,14 +55,89 @@ public class PlanGenerator {
 		List<Integer> frequencies = GetFrequencies(vmPairs, frequency);
 
 		Vms = CreateObjects(vmPairLocation,frequencies, migCoe);
-
+		boolean hasChanged = true;
+		boolean procced = false;
 		//manipulate the objects to produce outcome wanted
 		GenerateUtilityForVMs();
 
+		PrintUtility("Init");
 
+		do{
+			procced = false;
+			for (VM vm : Vms) 
+			{ 
+				int key = -1;
+				int utility = -1;
+				hasChanged = false;
+				for (Enumeration k = vm.Utility.keys(); k.hasMoreElements();) 
+				{ 
+					int index = (int) k.nextElement();
+					if(key == -1) {
+						key = vm.VmOGSource;
+						utility = vm.Utility.get(key);
+					}
+					if(vm.Utility.get(index) > utility && Collections.frequency(cap, String.valueOf(index)) < resCap) {
+						key = (int) index;
+						utility = vm.Utility.get(key);
+						hasChanged = true;
+						procced = true;
+					}				
+				}
+				if(hasChanged) {
+					//move vm to best utility.
+					cap.remove(String.valueOf(vm.VmOGSource));
+					cap.add(String.valueOf(key));
+					vm.VmOGSource = key;
+				}
+			}
+
+			if(procced) {
+				//reset utility and get new utility.
+				for(int k = 0; k < Vms.size();k++) {
+					Vms.get(k).Utility = new Hashtable();
+				}
+				GenerateUtilityForVMs();
+
+			}
+
+		}while(procced);
+
+		PrintUtility("Final");
 		PrintParameters(numPods, resCap,vmPairLocation,MBsLocation,frequencies,migCoe);
 
 	}
+
+	private static void PrintUtility(String name) {
+
+		FileOutputStream outputStream;
+		try {
+
+			outputStream = new FileOutputStream("Utility"+name+".txt");
+
+			for (int i = 0; i < Vms.size();i+=2) {
+
+				//k
+				String k = "Vm Location: " + Vms.get(i).VmOGSource + "\r\n" + Vms.get(i).Utility.toString() + "\r\n";
+				byte[] kBytes = k.getBytes();
+				outputStream.write(kBytes);
+				
+				String k1 = "Vm Pair Location: " + Vms.get(i+1).VmOGSource + "\r\n" + Vms.get(i+1).Utility.toString() + "\r\n";
+				byte[] kBytes1 = k1.getBytes();
+				outputStream.write(kBytes1);
+				
+				String k2 = "Utility Sum: " + (Vms.get(i).Utility.get(Vms.get(i).VmOGSource)+Vms.get(i+1).Utility.get(Vms.get(i).VmOGSource))+ "\r\n\r\n";
+				byte[] kBytes2 = k2.getBytes();
+				outputStream.write(kBytes2);
+
+			}
+
+			outputStream.close();
+		}catch(Exception e){
+			System.out.println("IOException has been thrown.\n" + e.getMessage() );
+		}	
+	}
+
+
 
 	//Generate Utility for each Vm
 	private static void GenerateUtilityForVMs() {
@@ -77,12 +150,13 @@ public class PlanGenerator {
 
 	//Calculate Utility for each possible PM
 	static Dictionary GetUtilityCost(VM vm) {
-		int utilityCost = 0;
 
 		for(int i =0; i < numPms; i++) {
-
-			if(i != vm.VmOGSource)
-				vm.Utility.put(i, VmCCR(vm.VmOGSource,i,vm.VmPairSource, vm.Frequency) - MigCost(i,vm.VmPairSource,vm.MigrationCost));
+			int vmccr = VmCCR(vm.VmOGSource,vm.VmPairSource,i, vm.Frequency, vm.isFirstVm);
+			int mig = MigCost(i,vm.VmOGSource,vm.MigrationCost);
+			int utilityCost =  vmccr-mig ;
+			//if(i != vm.VmOGSource)
+			vm.Utility.put(i, utilityCost);
 
 		}
 
@@ -90,10 +164,26 @@ public class PlanGenerator {
 	}
 
 	//This is the only equation that needs to be fixed.
-	private static int VmCCR(int sourceVm, int endVm, int newVm,int freq) {
+	private static int VmCCR(int sourceVm,int pairVm, int pm,int freq,boolean isfirst) {
+		int originalCommCost = 0;
+		int newCommCost = 0;
 
-		SDN.ShorestDistance(k,sourceVm , endVm);
-		return 0;
+		if(isfirst) {
+			originalCommCost = freq * (SDN.ShorestDistance(k, sourceVm, firstMB) + migration + (SDN.ShorestDistance(k, pairVm, lastMB)));
+
+			//New Comm Cost
+			newCommCost = freq * (SDN.ShorestDistance(k, pm, firstMB) + migration + (SDN.ShorestDistance(k, pairVm, lastMB)));
+
+			return originalCommCost -newCommCost;
+		}
+		else {
+			originalCommCost = freq * (migration + (SDN.ShorestDistance(k, pairVm, firstMB)) + SDN.ShorestDistance(k, sourceVm, lastMB));
+
+			//New Comm Cost
+			newCommCost = freq * (migration + (SDN.ShorestDistance(k, pairVm, firstMB)) + SDN.ShorestDistance(k, pm, lastMB));
+
+			return originalCommCost - newCommCost;
+		}
 	}
 
 	//Finds the migration cost between the old pair location and the new location.
@@ -114,6 +204,15 @@ public class PlanGenerator {
 			vm.VmOGSource = vms.get(i);
 			vm.Frequency = fs.get(freIndex);
 			vm.MigrationCost = migCoe;
+
+			if(i % 2 == 1) {
+				vm.isFirstVm = false;
+				vm.VmPairSource = vms.get(i - 1);
+			}
+			else {
+				vm.isFirstVm = true;
+				vm.VmPairSource = vms.get(i + 1);
+			}
 
 			VMS.add(vm);
 		}
@@ -189,9 +288,10 @@ public class PlanGenerator {
 			proceed = true;
 			while(proceed) {	
 				int result = r.nextInt(numPms-0) + 0;
-				if(Collections.frequency(list, result) <= resCap )
+				if(Collections.frequency(list, result) < resCap )
 				{
 					list.add(result);
+					cap.add(String.valueOf(result));
 					proceed = false;
 				}
 			}
