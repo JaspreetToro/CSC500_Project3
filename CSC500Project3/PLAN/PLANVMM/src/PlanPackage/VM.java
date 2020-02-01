@@ -7,8 +7,9 @@ public class VM {
 	int groupId;//to find vm pair connected.
 	int VmOGSource;//Original location
 	int VmPairSource;
+	boolean isFirstVm;
 	@SuppressWarnings("rawtypes")
-	Dictionary Utility = new Hashtable();
+	Dictionary<Integer,Integer> Utility = new Hashtable();
 	int Frequency;
 	int MigrationCost;
 
@@ -31,12 +32,13 @@ public class VM {
 		this.groupId = groupId;
 	}
 
-	public int getVmPairSource() {
-		return VmPairSource;
+	
+	public boolean getVmPairSource() {
+		return isFirstVm;
 	}
 	
-	public void setVmPairSource(int vmNew) {
-		VmPairSource = vmNew;
+	public void setVmPairSource(boolean vmNew) {
+		isFirstVm = vmNew;
 	}
 	
 	public int getVmOGSource() {
@@ -47,10 +49,12 @@ public class VM {
 		VmOGSource = vmOGSource;
 	}
 
+	@SuppressWarnings("rawtypes")
 	public Dictionary getUtility() {
 		return Utility;
 	}
 
+	@SuppressWarnings("rawtypes")
 	public void setUtility(Dictionary utility) {
 		Utility = utility;
 	}
