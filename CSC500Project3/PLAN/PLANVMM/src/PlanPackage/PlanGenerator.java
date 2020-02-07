@@ -29,11 +29,11 @@ public class PlanGenerator {
 	public static void main(String[] args) {
 		//k,rc,vmpairs,mbs,frequency,migration
 		//get inputs
-		int[] inputs = SDN.GetInput();
+		//int[] inputs = SDN.GetInput();
 
-		//SetUpPLAN(6,50,10,4,100,10);
+		SetUpPLAN(4,10,10,2,100,10);
 		//k,resCap,VmPairsCount,boxes,frequecy.migration
-		SetUpPLAN(inputs[0],inputs[1],inputs[2],inputs[3],inputs[4],inputs[5]);
+		//SetUpPLAN(inputs[0],inputs[1],inputs[2],inputs[3],inputs[4],inputs[5]);
 
 	}
 
@@ -55,20 +55,20 @@ public class PlanGenerator {
 		List<Integer> frequencies = GetFrequencies(vmPairs, frequency);
 
 		Vms = CreateObjects(vmPairLocation,frequencies, migCoe);
-		boolean hasChanged = true;
 		boolean procced = false;
 		//manipulate the objects to produce outcome wanted
 		GenerateUtilityForVMs();
 
-		PrintUtility("Init");
-
+		//PrintUtility("Init");
+		String loop = "";
+		int numberOfIterations = 1;
 		do{
-			procced = false;
 			for (VM vm : Vms) 
 			{ 
+				procced = false;
 				int key = -1;
-				int utility = -1;
-				hasChanged = false;
+				int utility = 0;
+				
 				for (Enumeration k = vm.Utility.keys(); k.hasMoreElements();) 
 				{ 
 					int index = (int) k.nextElement();
@@ -76,35 +76,76 @@ public class PlanGenerator {
 						key = vm.VmOGSource;
 						utility = vm.Utility.get(key);
 					}
-					if(vm.Utility.get(index) > utility && Collections.frequency(cap, String.valueOf(index)) < resCap) {
+					
+					int newUtility = vm.Utility.get(index);
+					
+					if(newUtility > utility && Collections.frequency(cap, String.valueOf(index)) < resCap) {
+						//get key with the best utility in all vms.
 						key = (int) index;
-						utility = vm.Utility.get(key);
-						hasChanged = true;
 						procced = true;
+						utility = vm.Utility.get(key);
 					}				
 				}
-				if(hasChanged) {
-					//move vm to best utility.
+				if(procced) {
+					
+					//print stament before updating key and utility
+					loop = loop + "Loop Iteration: " + numberOfIterations++ + "\r\n";
+					loop = loop + "GroupId: " + vm.groupId + "\r\n";
+					loop = loop + "Vm: " + vm.VmOGSource + " has moved to PM: " + key + "\r\n";
+					loop = loop + "All Utility:"+ vm.Utility.toString() + "\r\n";
+					loop = loop + "Best Utility: " + utility + "\r\n" + "\r\n";
+					
+					//add and remove vm from resCap list
 					cap.remove(String.valueOf(vm.VmOGSource));
 					cap.add(String.valueOf(key));
+					
+					//generate new key and utility. set VM with new data
 					vm.VmOGSource = key;
+					vm.Utility = GetUtilityCost(vm);
 				}
-			}
-
-			if(procced) {
-				//reset utility and get new utility.
-				for(int k = 0; k < Vms.size();k++) {
-					Vms.get(k).Utility = new Hashtable();
-				}
-				GenerateUtilityForVMs();
-
+				
 			}
 
 		}while(procced);
 
-		PrintUtility("Final");
+		loop = PrintOGSource(Vms, loop);
+		
+		if(!procced) {
+			loop = "\r\n" +loop + "Final Utility \r\n";
+			for (VM vm : Vms) 
+			{
+				loop = loop + "Vm: "+ vm.VmOGSource + "\r\n" + vm.Utility.toString() + "\r\n";
+			}
+		}
+		
+		FileOutputStream outputStream;
+		try {
+
+			outputStream = new FileOutputStream("Utility"+"Final"+".txt");
+			byte[] kBytes = loop.getBytes();
+			outputStream.write(kBytes);
+
+			outputStream.close();
+		}catch(Exception e){
+			System.out.println("IOException has been thrown.\n" + e.getMessage() );
+		}	
+
+		//PrintUtility("Final");
 		PrintParameters(numPods, resCap,vmPairLocation,MBsLocation,frequencies,migCoe);
 
+	}
+
+	private static String PrintOGSource(List<VM> vms2,String s) {
+		String temp = "---------------------------------------------------------------\r\nThe Following has the Utilities of all Vms,"
+				+ " as you can see none of the possiblities are greater than zero."
+				+ " \r\nFinal Vm Locations: (";
+		String temp1 = "";
+		for(VM vm : vms2) {
+			temp1 = String.join(",", temp1, Integer.toString(vm.VmOGSource));
+		}
+		temp1 = temp1.replaceFirst(",", "");
+		temp = temp + temp1 + ")\r\n";
+		return s + temp;
 	}
 
 	private static void PrintUtility(String name) {
@@ -114,20 +155,22 @@ public class PlanGenerator {
 
 			outputStream = new FileOutputStream("Utility"+name+".txt");
 
-			for (int i = 0; i < Vms.size();i+=2) {
+			for (int i = 0; i < Vms.size();i++) {
 
 				//k
-				String k = "Vm Location: " + Vms.get(i).VmOGSource + "\r\n" + Vms.get(i).Utility.toString() + "\r\n";
+				String k = "Vm Location: " + Vms.get(i).VmOGSource + "\r\n" 
+						+ "Vm Group: "+Vms.get(i).groupId + "\r\n" 
+						+ "Utility: " + Vms.get(i).Utility.get(Vms.get(i).VmOGSource) + "\r\n";
 				byte[] kBytes = k.getBytes();
 				outputStream.write(kBytes);
-				
-				String k1 = "Vm Pair Location: " + Vms.get(i+1).VmOGSource + "\r\n" + Vms.get(i+1).Utility.toString() + "\r\n";
-				byte[] kBytes1 = k1.getBytes();
-				outputStream.write(kBytes1);
-				
-				String k2 = "Utility Sum: " + (Vms.get(i).Utility.get(Vms.get(i).VmOGSource)+Vms.get(i+1).Utility.get(Vms.get(i).VmOGSource))+ "\r\n\r\n";
-				byte[] kBytes2 = k2.getBytes();
-				outputStream.write(kBytes2);
+				//				
+				//				String k1 = "Vm Pair Location: " + Vms.get(i+1).VmOGSource + "\r\n" + Vms.get(i+1).Utility.toString() + "\r\n";
+				//				byte[] kBytes1 = k1.getBytes();
+				//				outputStream.write(kBytes1);
+				//				
+				//				String k2 = "Utility Sum: " + (Vms.get(i).Utility.get(Vms.get(i).VmOGSource)+Vms.get(i+1).Utility.get(Vms.get(i).VmOGSource))+ "\r\n\r\n";
+				//				byte[] kBytes2 = k2.getBytes();
+				//				outputStream.write(kBytes2);
 
 			}
 
