@@ -79,7 +79,6 @@ public class VM {
 	public int getMigrationCost() {
 		return MigrationCost;
 	}
-
 	public void setMigrationCost(int migrationCost) {
 		MigrationCost = migrationCost;
 	}
