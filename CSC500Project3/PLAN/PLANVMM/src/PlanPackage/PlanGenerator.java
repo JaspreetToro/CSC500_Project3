@@ -29,11 +29,11 @@ public class PlanGenerator {
 	public static void main(String[] args) {
 		//k,rc,vmpairs,mbs,frequency,migration
 		//get inputs
-		//int[] inputs = SDN.GetInput();
+		int[] inputs = SDN.GetInput();
 
-		SetUpPLAN(4,10,10,2,100,10);
+		//SetUpPLAN(4,10,10,2,100,10);
 		//k,resCap,VmPairsCount,boxes,frequecy.migration
-		//SetUpPLAN(inputs[0],inputs[1],inputs[2],inputs[3],inputs[4],inputs[5]);
+		SetUpPLAN(inputs[0],inputs[1],inputs[2],inputs[3],inputs[4],inputs[5]);
 
 	}
 
@@ -115,6 +115,7 @@ public class PlanGenerator {
 			for (VM vm : Vms) 
 			{
 				loop = loop + "Vm: "+ vm.VmOGSource + "\r\n" + vm.Utility.toString() + "\r\n";
+				
 			}
 		}
 		
